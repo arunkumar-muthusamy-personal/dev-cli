@@ -218,7 +218,7 @@ async def _chat(
         messages.append({"role": "assistant", "content": response_text})
 
         # Offer to write any files detected in the response
-        file_writer.prompt_and_write(response_text)
+        file_writer.prompt_and_write(response_text, user_message=user_input)
 
         # Trim in-memory history
         if len(messages) > limit * 2:

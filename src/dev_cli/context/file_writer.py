@@ -63,6 +63,9 @@ _COMMENT_PATH = re.compile(
 _DIFF_FROM = re.compile(r"^---\s+(?:a/)?([\w./\\-]+)", re.MULTILINE)
 _DIFF_TO   = re.compile(r"^\+\+\+\s+(?:b/)?([\w./\\-]+)", re.MULTILINE)
 
+# Extract a filename from a user message like "create foo.py" or "make a file called bar/baz.ts"
+_USER_MSG_PATH = re.compile(r"(?:create|make|write|add|generate|new)\s+(?:a\s+)?(?:file\s+(?:called\s+|named\s+)?)?([^\s]+\.\w+)", re.IGNORECASE)
+
 _WRITABLE_EXTENSIONS = frozenset({
     ".py", ".ts", ".tsx", ".js", ".jsx",
     ".tf", ".tfvars", ".hcl",
@@ -119,11 +122,18 @@ def _diff_target_path(body: str) -> str | None:
     return None
 
 
-def parse_files(response: str, project_root: Path | None = None) -> list[DetectedFile]:
+def parse_files(response: str, project_root: Path | None = None, user_message: str | None = None) -> list[DetectedFile]:
     """Extract all writable file operations from an LLM response."""
     header_paths: dict[int, str] = {}
     for m in _HEADER_PATH.finditer(response):
         header_paths[m.end() - 3] = m.group(1)
+
+    # Try to extract a filename hint from the user's message as a last resort
+    user_message_path: str | None = None
+    if user_message:
+        um = _USER_MSG_PATH.search(user_message)
+        if um and _is_writable(um.group(1)):
+            user_message_path = um.group(1)
 
     results: list[DetectedFile] = []
     seen: set[str] = set()
@@ -154,14 +164,22 @@ def parse_files(response: str, project_root: Path | None = None) -> list[Detecte
         elif start in header_paths and _is_writable(header_paths[start]):
             file_path = header_paths[start]
         else:
-            first_line = body.strip().split("\n")[0]
-            cm = _COMMENT_PATH.match(first_line.strip())
-            if cm and _is_writable(cm.group(1)):
-                file_path = cm.group(1)
-                body = "\n".join(body.strip().split("\n")[1:]).lstrip("\n")
+            # Check first non-empty line for a comment-style path
+            stripped_lines = body.strip().split("\n")
+            for i, line in enumerate(stripped_lines[:3]):  # check up to 3 lines
+                cm = _COMMENT_PATH.match(line.strip())
+                if cm and _is_writable(cm.group(1)):
+                    file_path = cm.group(1)
+                    body = "\n".join(stripped_lines[i + 1:]).lstrip("\n")
+                    break
 
         if not file_path or file_path in seen:
-            continue
+            # Last resort: use filename extracted from user's message (only once)
+            if not file_path and user_message_path and user_message_path not in seen:
+                file_path = user_message_path
+                user_message_path = None  # consume it so only one block gets it
+            else:
+                continue
         seen.add(file_path)
 
         content = body.rstrip("\n") + "\n"
@@ -252,16 +270,16 @@ class FileWriter:
         self._root = project_path
         self._console = console or Console()
 
-    def prompt_and_write(self, response: str) -> list[str]:
+    def prompt_and_write(self, response: str, user_message: str | None = None) -> list[str]:
         """Parse response, show table, write/patch confirmed files."""
         try:
-            return self._prompt_and_write(response)
+            return self._prompt_and_write(response, user_message=user_message)
         except Exception as e:
             self._console.print(f"[yellow]Warning: file operation failed — {e}[/yellow]")
             return []
 
-    def _prompt_and_write(self, response: str) -> list[str]:
-        files = parse_files(response, project_root=self._root)
+    def _prompt_and_write(self, response: str, user_message: str | None = None) -> list[str]:
+        files = parse_files(response, project_root=self._root, user_message=user_message)
         if not files:
             return []
 
