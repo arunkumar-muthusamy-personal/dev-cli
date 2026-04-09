@@ -35,8 +35,11 @@ dev = [
 [project.scripts]
 dev-cli = "dev_cli.main:app"
 
+[tool.hatch.build]
+sources = ["src"]
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/dev_cli"]
+packages = ["dev_cli"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
