@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dev_cli.detectors import nodejs, python, terraform
-from dev_cli.storage.models import ProjectManifest
+from src.dev_cli.detectors import terraform
+from src.dev_cli.storage.models import ProjectManifest
+from src.dev_cli.detectors import nodejs, python
 
 
 class ProjectDetector:

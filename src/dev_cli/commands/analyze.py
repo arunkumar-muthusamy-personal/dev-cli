@@ -7,8 +7,8 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from dev_cli.detectors.detector import ProjectDetector
-from dev_cli.storage.manifest import ManifestStore
+from src.dev_cli.detectors.detector import ProjectDetector
+from src.dev_cli.storage.manifest import ManifestStore
 
 console = Console()
 

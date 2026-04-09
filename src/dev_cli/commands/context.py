@@ -7,7 +7,7 @@ import typer
 from rich.console import Console
 from rich.table import Table
 
-from dev_cli.storage.conversation import ConversationDB
+from src.dev_cli.storage.conversation import ConversationDB
 
 console = Console()
 

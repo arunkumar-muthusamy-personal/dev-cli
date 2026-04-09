@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dev_cli.detectors.utils import find_files, parse_json_file
-from dev_cli.storage.models import LanguageDetection
+from src.dev_cli.detectors.utils import find_files, parse_json_file
+from src.dev_cli.storage.models import LanguageDetection
 
 _FRAMEWORK_DEPS: dict[str, list[str]] = {
     "react": ["react", "react-dom"],

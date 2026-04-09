@@ -9,21 +9,21 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
 
-from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
-from dev_cli.git_cli.manager import GitManager
-from dev_cli.git_cli.intent_detector import is_git_related
-from dev_cli.config import get_settings
-from dev_cli.context.file_ops import FileOpsManager, detect_file_op
-from dev_cli.context.file_reader import FileContextReader
-from dev_cli.context.file_writer import FileWriter
-from dev_cli.detectors.detector import ProjectDetector
-from dev_cli.llm.client import LLMClient, LLMError
-from dev_cli.llm.streaming import StreamingRenderer
-from dev_cli.prompts.base import build_system_prompt
-from dev_cli.shell.runner import ShellRunner
-from dev_cli.shell.task_detector import detect_task, resolve_command
-from dev_cli.storage.conversation import ConversationDB
-from dev_cli.storage.manifest import ManifestStore
+from src.dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
+from src.dev_cli.git_cli.manager import GitManager
+from src.dev_cli.git_cli.intent_detector import is_git_related
+from src.dev_cli.config import get_settings
+from src.dev_cli.context.file_ops import FileOpsManager, detect_file_op
+from src.dev_cli.context.file_reader import FileContextReader
+from src.dev_cli.context.file_writer import FileWriter
+from src.dev_cli.detectors.detector import ProjectDetector
+from src.dev_cli.llm.client import LLMClient, LLMError
+from src.dev_cli.llm.streaming import StreamingRenderer
+from src.dev_cli.prompts.base import build_system_prompt
+from src.dev_cli.shell.runner import ShellRunner
+from src.dev_cli.shell.task_detector import detect_task, resolve_command
+from src.dev_cli.storage.conversation import ConversationDB
+from src.dev_cli.storage.manifest import ManifestStore
 
 console = Console()
 
@@ -68,7 +68,7 @@ async def _chat(
     dev_cli_dir = project_path / ".dev-cli"
     if not dev_cli_dir.exists():
         console.print("[yellow]No .dev-cli/ found — initializing...[/yellow]")
-        from dev_cli.commands.init import _init
+        from src.dev_cli.commands.init import _init
         await _init(project_path, force=False)
 
     # --- Load / refresh manifest ---
@@ -252,7 +252,7 @@ async def _handle_slash(
         console.print(Markdown(_HELP_TEXT))
 
     elif cmd_name == "/history":
-        from dev_cli.commands.context import _context
+        from src.dev_cli.commands.context import _context
         await _context(project_path, limit=20, clear=False, export=None)
 
     elif cmd_name == "/clear":

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from dev_cli.storage.conversation import ConversationDB
-from dev_cli.storage.manifest import ManifestStore
-from dev_cli.storage.models import LanguageDetection, ProjectManifest
+from src.dev_cli.storage.conversation import ConversationDB
+from src.dev_cli.storage.manifest import ManifestStore
+from src.dev_cli.storage.models import LanguageDetection, ProjectManifest
 
 
 @pytest.fixture
