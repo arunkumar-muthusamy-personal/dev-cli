@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -18,7 +22,7 @@ class ProjectManifest(BaseModel):
     project_path: str
     project_name: str
     languages: list[LanguageDetection] = Field(default_factory=list)
-    scanned_at: datetime = Field(default_factory=datetime.utcnow)
+    scanned_at: datetime = Field(default_factory=_utcnow)
     extra: dict[str, Any] = Field(default_factory=dict)
 
     @property
@@ -39,12 +43,12 @@ class MessageRecord(BaseModel):
     role: str  # "user" | "assistant" | "system"
     content: str
     tokens: int | None = None
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
 
 
 class ConversationRecord(BaseModel):
     id: str
     project_path: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utcnow)
+    updated_at: datetime = Field(default_factory=_utcnow)
     message_count: int = 0

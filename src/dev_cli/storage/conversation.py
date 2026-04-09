@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -13,7 +13,7 @@ _TS_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 
 
 def _now() -> str:
-    return datetime.utcnow().strftime(_TS_FORMAT)
+    return datetime.now(timezone.utc).strftime(_TS_FORMAT)
 
 
 def _parse_ts(s: str) -> datetime:
