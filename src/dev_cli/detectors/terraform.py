@@ -3,8 +3,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from src.dev_cli.detectors.utils import find_files, read_file_safe
-from src.dev_cli.storage.models import LanguageDetection
+from dev_cli.detectors.utils import find_files, read_file_safe
+from dev_cli.storage.models import LanguageDetection
 
 _PROVIDER_PATTERNS = re.compile(
     r'source\s*=\s*"(?:hashicorp/)?(\w+)"', re.IGNORECASE

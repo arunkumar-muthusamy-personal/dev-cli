@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from src.dev_cli.storage.models import ProjectManifest
+from dev_cli.storage.models import ProjectManifest
 
 
 # ---------------------------------------------------------------------------

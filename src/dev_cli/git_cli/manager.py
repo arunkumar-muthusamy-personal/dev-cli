@@ -10,9 +10,9 @@ from pathlib import Path
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from src.dev_cli.git_cli.command_classifier import GitRisk, classify
-from src.dev_cli.git_cli.intent_detector import detect_git_intent
-from src.dev_cli.shell.runner import CommandResult, ShellRunner
+from dev_cli.git_cli.command_classifier import GitRisk, classify
+from dev_cli.git_cli.intent_detector import detect_git_intent
+from dev_cli.shell.runner import CommandResult, ShellRunner
 
 # Placeholders that need user input before the command can run
 _PLACEHOLDERS = {

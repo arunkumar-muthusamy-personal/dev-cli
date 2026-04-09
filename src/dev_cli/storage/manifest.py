@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.dev_cli.storage.models import ProjectManifest
+from dev_cli.storage.models import ProjectManifest
 
 _MANIFEST_FILENAME = "project_manifest.json"
 

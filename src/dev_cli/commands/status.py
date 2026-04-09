@@ -7,10 +7,10 @@ import typer
 from rich.console import Console
 from rich.panel import Panel
 
-from src.dev_cli.config import get_settings
-from src.dev_cli.storage.conversation import ConversationDB
-from src.dev_cli.storage.manifest import ManifestStore
-from src.dev_cli.version import __version__
+from dev_cli.config import get_settings
+from dev_cli.storage.conversation import ConversationDB
+from dev_cli.storage.manifest import ManifestStore
+from dev_cli.version import __version__
 
 console = Console()
 

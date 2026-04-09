@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from src.dev_cli.detectors.utils import find_files, read_file_safe
+from dev_cli.detectors.utils import find_files, read_file_safe
 
 # Limits
 MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB per file

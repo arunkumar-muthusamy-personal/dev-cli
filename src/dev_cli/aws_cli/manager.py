@@ -10,10 +10,10 @@ import re
 from rich.console import Console
 from rich.prompt import Confirm, Prompt
 
-from src.dev_cli.aws_cli.cache import CommandCache
-from src.dev_cli.aws_cli.command_classifier import CommandRisk, classify
-from src.dev_cli.aws_cli.profile_detector import get_active_profile, get_available_profiles
-from src.dev_cli.shell.runner import CommandResult, ShellRunner
+from dev_cli.aws_cli.cache import CommandCache
+from dev_cli.aws_cli.command_classifier import CommandRisk, classify
+from dev_cli.aws_cli.profile_detector import get_active_profile, get_available_profiles
+from dev_cli.shell.runner import CommandResult, ShellRunner
 
 # ---------------------------------------------------------------------------
 # Intent detection: map natural-language phrases to AWS CLI commands

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from src.dev_cli.storage.models import ProjectManifest
-from src.dev_cli.prompts import nodejs, python, sql
+from dev_cli.storage.models import ProjectManifest
+from dev_cli.prompts import nodejs, python, sql
 
 _BASE = """You are Dev-CLI, an expert AI developer assistant embedded in the developer's terminal.
 You help with: code analysis, debugging, refactoring, testing, dependency mapping, and architecture.
@@ -44,7 +44,7 @@ _LANG_PROMPTS: dict[str, str] = {}
 def _get_lang_prompt(language: str) -> str:
     global _LANG_PROMPTS
     if not _LANG_PROMPTS:
-        from src.dev_cli.prompts import terraform
+        from dev_cli.prompts import terraform
         _LANG_PROMPTS = {
             "python": python.SYSTEM_PROMPT,
             "typescript": nodejs.SYSTEM_PROMPT,

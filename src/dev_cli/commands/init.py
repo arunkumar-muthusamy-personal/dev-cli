@@ -8,9 +8,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.dev_cli.detectors.detector import ProjectDetector
-from src.dev_cli.storage.conversation import ConversationDB
-from src.dev_cli.storage.manifest import ManifestStore
+from dev_cli.detectors.detector import ProjectDetector
+from dev_cli.storage.conversation import ConversationDB
+from dev_cli.storage.manifest import ManifestStore
 
 console = Console()
 
@@ -73,7 +73,7 @@ async def _init(project_path: Path, force: bool) -> None:
         console.print("[yellow]No languages detected (empty project)[/yellow]")
 
     # 5. System-level ~/.dev-cli/
-    from src.dev_cli.config import get_settings
+    from dev_cli.config import get_settings
     settings = get_settings()
     settings.dev_cli_home.mkdir(parents=True, exist_ok=True)
 

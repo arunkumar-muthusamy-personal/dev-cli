@@ -6,8 +6,8 @@ from pathlib import Path
 
 import aiosqlite
 
-from src.dev_cli.storage.models import ConversationRecord, MessageRecord
-from src.dev_cli.storage.schema import ALL_SCHEMAS
+from dev_cli.storage.models import ConversationRecord, MessageRecord
+from dev_cli.storage.schema import ALL_SCHEMAS
 
 _TS_FORMAT = "%Y-%m-%dT%H:%M:%S.%f"
 

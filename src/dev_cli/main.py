@@ -5,7 +5,7 @@ from typing import Optional
 import typer
 from rich.console import Console
 
-from src.dev_cli.version import __app_name__, __version__
+from dev_cli.version import __app_name__, __version__
 
 app = typer.Typer(
     name=__app_name__,
@@ -42,11 +42,11 @@ def main(
 
 # --- Register commands ---
 
-from src.dev_cli.commands.init import init_command
-from src.dev_cli.commands.chat import chat_command
-from src.dev_cli.commands.analyze import analyze_command
-from src.dev_cli.commands.context import context_command
-from src.dev_cli.commands.status import status_command
+from dev_cli.commands.init import init_command
+from dev_cli.commands.chat import chat_command
+from dev_cli.commands.analyze import analyze_command
+from dev_cli.commands.context import context_command
+from dev_cli.commands.status import status_command
 
 app.command("init")(init_command)
 app.command("chat")(chat_command)

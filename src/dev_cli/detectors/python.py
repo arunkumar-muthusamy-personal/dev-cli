@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.dev_cli.detectors.utils import count_files, find_files, parse_json_file, read_file_safe
-from src.dev_cli.storage.models import LanguageDetection
+from dev_cli.detectors.utils import count_files, find_files, parse_json_file, read_file_safe
+from dev_cli.storage.models import LanguageDetection
 
 _FRAMEWORK_MARKERS: dict[str, list[str]] = {
     "fastapi": ["fastapi"],

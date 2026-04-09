@@ -19,7 +19,7 @@ from collections.abc import AsyncGenerator
 
 from openai import AsyncOpenAI, APIError, APIConnectionError, APIStatusError
 
-from src.dev_cli.config import get_settings
+from dev_cli.config import get_settings
 
 
 class LLMError(Exception):
