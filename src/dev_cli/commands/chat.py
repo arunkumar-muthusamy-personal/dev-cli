@@ -10,9 +10,9 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
-from dev_cli.git_cli.manager import GitManager
-from dev_cli.git_cli.intent_detector import is_git_related
 from dev_cli.config import get_settings
+from dev_cli.git_cli.intent_detector import is_git_related
+from dev_cli.git_cli.manager import GitManager
 from dev_cli.context.file_ops import FileOpsManager, detect_file_op
 from dev_cli.context.file_reader import FileContextReader
 from dev_cli.context.file_writer import FileWriter
@@ -129,7 +129,7 @@ async def _chat(
         if user_input.startswith("/"):
             result = await _handle_slash(
                 user_input, db, conv.id, manifest, project_path,
-                shell_runner, aws_manager, console,
+                shell_runner, aws_manager, git_manager, console,
             )
             if result == "exit":
                 console.print("[dim]Goodbye![/dim]")
@@ -233,6 +233,7 @@ async def _handle_slash(
     project_path: Path,
     shell_runner: ShellRunner,
     aws_manager: AWSCLIManager,
+    git_manager: GitManager,
     console: Console,
 ) -> str | None:
     """Handle slash commands.

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import typer
 from rich.console import Console
 
+from dev_cli.commands.analyze import analyze_command
+from dev_cli.commands.chat import chat_command
+from dev_cli.commands.context import context_command
+from dev_cli.commands.init import init_command
+from dev_cli.commands.status import status_command
 from dev_cli.version import __app_name__, __version__
 
 app = typer.Typer(
@@ -25,7 +28,7 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None,
         "--version",
         "-v",
@@ -39,14 +42,6 @@ def main(
         import logging
         logging.basicConfig(level=logging.DEBUG)
 
-
-# --- Register commands ---
-
-from dev_cli.commands.init import init_command
-from dev_cli.commands.chat import chat_command
-from dev_cli.commands.analyze import analyze_command
-from dev_cli.commands.context import context_command
-from dev_cli.commands.status import status_command
 
 app.command("init")(init_command)
 app.command("chat")(chat_command)

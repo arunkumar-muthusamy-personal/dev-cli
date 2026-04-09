@@ -106,12 +106,12 @@ class GitManager:
         return Confirm.ask("Run?", console=self._console, default=True)
 
     def _confirm_modify(self, cmd: str) -> bool:
-        self._console.print(f"\n[bold yellow]Git (modifies history/state):[/bold yellow]")
+        self._console.print("\n[bold yellow]Git (modifies history/state):[/bold yellow]")
         self._console.print(f"  [yellow]{cmd}[/yellow]")
         return Confirm.ask("Confirm?", console=self._console, default=False)
 
     def _confirm_destructive(self, cmd: str) -> bool:
-        self._console.print(f"\n[bold red]⚠ Destructive git operation — this may lose work:[/bold red]")
+        self._console.print("\n[bold red]⚠ Destructive git operation — this may lose work:[/bold red]")
         self._console.print(f"  [red]{cmd}[/red]")
         first = Confirm.ask("Are you sure?", console=self._console, default=False)
         if not first:

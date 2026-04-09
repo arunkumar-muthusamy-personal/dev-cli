@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from dev_cli.storage.models import ProjectManifest
 from dev_cli.prompts import nodejs, python, sql
+from dev_cli.storage.models import ProjectManifest
 
 _BASE = """You are Dev-CLI, an expert AI developer assistant embedded in the developer's terminal.
 You help with: code analysis, debugging, refactoring, testing, dependency mapping, and architecture.
@@ -68,12 +68,12 @@ def build_system_prompt(manifest: ProjectManifest) -> str:
         "project_name": manifest.project_name,
         "languages": [
             {
-                "language": l.language,
-                "version": l.version,
-                "frameworks": l.frameworks,
-                "key_files": l.key_files,
+                "language": lang.language,
+                "version": lang.version,
+                "frameworks": lang.frameworks,
+                "key_files": lang.key_files,
             }
-            for l in manifest.languages
+            for lang in manifest.languages
         ],
     }
     parts.append(

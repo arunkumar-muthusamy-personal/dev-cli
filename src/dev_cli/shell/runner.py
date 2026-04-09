@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import platform
-import shlex
 import subprocess
 from dataclasses import dataclass
 
@@ -64,7 +63,7 @@ class ShellRunner:
         auto_confirm: bool = False,
     ) -> CommandResult | None:
         """Show the command, ask confirmation, execute. Returns None if cancelled."""
-        self._console.print(f"\n[bold yellow]Run command:[/bold yellow]")
+        self._console.print("\n[bold yellow]Run command:[/bold yellow]")
         self._console.print(f"  [cyan]$ {command}[/cyan]\n")
 
         if not auto_confirm:

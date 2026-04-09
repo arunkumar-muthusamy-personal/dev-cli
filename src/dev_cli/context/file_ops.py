@@ -7,14 +7,14 @@ from __future__ import annotations
 import re
 import shutil
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from rich.console import Console
-from rich.prompt import Confirm, Prompt
+from rich.prompt import Confirm
 
 
-class FileOpKind(str, Enum):
+class FileOpKind(StrEnum):
     DELETE = "delete"
     RENAME = "rename"
 
@@ -142,7 +142,7 @@ class FileOpsManager:
         rel_src  = str(src.relative_to(self._root))
         rel_dest = raw_dest
 
-        self._console.print(f"\n[bold yellow]Rename/move:[/bold yellow]")
+        self._console.print("\n[bold yellow]Rename/move:[/bold yellow]")
         self._console.print(f"  [yellow]{rel_src}[/yellow] → [green]{rel_dest}[/green]")
         confirmed = Confirm.ask("Confirm?", console=self._console, default=False)
         if not confirmed:

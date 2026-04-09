@@ -6,8 +6,8 @@ letting the LLM just describe how to do it.
 """
 from __future__ import annotations
 
-import re
 from pathlib import Path
+import re
 
 from dev_cli.storage.models import ProjectManifest
 
@@ -76,7 +76,7 @@ def detect_task(message: str) -> str | None:
 
 def resolve_command(task: str, project_path: Path, manifest: ProjectManifest) -> str | None:
     """Map a task name to the right shell command for this project."""
-    lang_names = {l.language.lower() for l in manifest.languages}
+    lang_names = {lang.language.lower() for lang in manifest.languages}
 
     # Node: check for yarn.lock / pnpm-lock.yaml to pick the right package manager
     if "typescript" in lang_names or "node.js" in lang_names:

@@ -197,17 +197,17 @@ class AWSCLIManager:
     # ------------------------------------------------------------------
 
     def _confirm_read(self, cmd: str) -> bool:
-        self._console.print(f"\n[bold cyan]AWS command:[/bold cyan]")
+        self._console.print("\n[bold cyan]AWS command:[/bold cyan]")
         self._console.print(f"  [cyan]$ {cmd}[/cyan]")
         return Confirm.ask("Run?", console=self._console, default=True)
 
     def _confirm_modify(self, cmd: str) -> bool:
-        self._console.print(f"\n[bold yellow]⚠ This will MODIFY AWS resources:[/bold yellow]")
+        self._console.print("\n[bold yellow]⚠ This will MODIFY AWS resources:[/bold yellow]")
         self._console.print(f"  [yellow]$ {cmd}[/yellow]")
         return Confirm.ask("Confirm?", console=self._console, default=False)
 
     def _confirm_delete(self, cmd: str) -> bool:
-        self._console.print(f"\n[bold red]⛔ DESTRUCTIVE — this will DELETE AWS resources:[/bold red]")
+        self._console.print("\n[bold red]⛔ DESTRUCTIVE — this will DELETE AWS resources:[/bold red]")
         self._console.print(f"  [red]$ {cmd}[/red]")
         first = Confirm.ask("Are you sure?", console=self._console, default=False)
         if not first:

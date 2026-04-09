@@ -37,7 +37,7 @@ from __future__ import annotations
 import difflib
 import re
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from rich.console import Console
@@ -80,7 +80,7 @@ _WRITABLE_EXTENSIONS = frozenset({
 # Data model
 # ---------------------------------------------------------------------------
 
-class FileAction(str, Enum):
+class FileAction(StrEnum):
     CREATE  = "create"
     REPLACE = "replace"
     PATCH   = "patch"

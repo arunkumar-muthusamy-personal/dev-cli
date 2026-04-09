@@ -48,13 +48,13 @@ async def _status(project_path: Path) -> None:
         lines.append("  Messages: [yellow]not initialized[/yellow]")
 
     if settings.mode == "direct":
-        lines.append(f"\n[bold]LLM (direct mode)[/bold]")
+        lines.append("\n[bold]LLM (direct mode)[/bold]")
         lines.append(f"  Model:   {settings.llm_model}")
         lines.append(f"  API URL: {settings.llm_base_url}")
         key_hint = "set" if settings.llm_api_key else "[yellow]NOT SET — set DEV_CLI_LLM_API_KEY[/yellow]"
         lines.append(f"  API key: {key_hint}")
     else:
-        lines.append(f"\n[bold]Backend proxy[/bold]")
+        lines.append("\n[bold]Backend proxy[/bold]")
         lines.append(f"  Endpoint: {settings.api_endpoint}")
         lines.append("  Auth: [yellow]not configured (Phase 2)[/yellow]")
 

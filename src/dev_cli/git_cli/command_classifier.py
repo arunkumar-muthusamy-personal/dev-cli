@@ -1,10 +1,10 @@
 """Classify git commands by risk level."""
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class GitRisk(str, Enum):
+class GitRisk(StrEnum):
     READ        = "read"         # safe — no confirmation
     MODIFY      = "modify"       # one confirmation
     DESTRUCTIVE = "destructive"  # double confirmation — can lose work

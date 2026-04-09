@@ -61,7 +61,7 @@ class Settings(BaseSettings):
     verbose: bool = Field(default=False)
 
     @model_validator(mode="after")
-    def _check_required(self) -> "Settings":
+    def _check_required(self) -> Settings:
         """Validate required settings and print a clear error if any are missing."""
         errors: list[str] = []
 

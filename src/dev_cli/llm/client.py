@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
-from openai import AsyncOpenAI, APIError, APIConnectionError, APIStatusError
+from openai import APIConnectionError, APIError, APIStatusError, AsyncOpenAI
 
 from dev_cli.config import get_settings
 

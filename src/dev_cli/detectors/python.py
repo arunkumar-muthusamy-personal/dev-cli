@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dev_cli.detectors.utils import count_files, find_files, parse_json_file, read_file_safe
+from dev_cli.detectors.utils import find_files, parse_json_file, read_file_safe
 from dev_cli.storage.models import LanguageDetection
 
 _FRAMEWORK_MARKERS: dict[str, list[str]] = {
@@ -42,7 +42,6 @@ def detect(root: Path) -> LanguageDetection | None:
 
     for toml_path in find_files(root, "pyproject.toml"):
         key_files.append(str(toml_path.relative_to(root)))
-        data = parse_json_file(toml_path) if toml_path.suffix == ".json" else {}
         frameworks.update(_detect_frameworks(read_file_safe(toml_path)))
 
     for setup_file in ["setup.py", "setup.cfg"]:

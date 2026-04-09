@@ -4,10 +4,10 @@ This determines how much confirmation to ask from the user before running.
 """
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 
 
-class CommandRisk(str, Enum):
+class CommandRisk(StrEnum):
     READ = "read"       # safe — no confirmation needed
     MODIFY = "modify"   # requires one confirmation
     DELETE = "delete"   # requires double confirmation
