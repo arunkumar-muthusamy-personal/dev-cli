@@ -199,8 +199,6 @@ def parse_files(response: str, project_root: Path | None = None) -> list[Detecte
 
 def apply_patch(original: str, diff_text: str) -> str | None:
     """Apply a unified diff to *original* text. Returns patched text or None on failure."""
-    orig_lines = original.splitlines(keepends=True)
-    result_lines = list(orig_lines)
     hunk_re = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", re.MULTILINE)
 
     try:
@@ -208,28 +206,35 @@ def apply_patch(original: str, diff_text: str) -> str | None:
         if not hunks:
             return None
 
+        result_lines = original.splitlines(keepends=True)
         diff_lines = diff_text.splitlines(keepends=True)
         offset = 0
 
         for hunk in hunks:
-            orig_start = int(hunk.group(1)) - 1
-            orig_count = int(hunk.group(2) or 1)
+            orig_start = int(hunk.group(1)) - 1  # 0-based
 
-            # Collect hunk lines
-            hunk_body_start = diff_text[:hunk.start()].count("\n") + 1
-            removes, adds = [], []
+            # Find where this hunk's body starts in diff_lines
+            hunk_body_start = diff_text[: hunk.start()].count("\n") + 1
+
+            # Walk the hunk line-by-line, maintaining a pointer into result_lines
+            result_pos = orig_start + offset
             for line in diff_lines[hunk_body_start:]:
                 if line.startswith("@@"):
                     break
-                if line.startswith("-"):
-                    removes.append(line[1:])
-                elif line.startswith("+"):
-                    adds.append(line[1:])
-
-            # Apply
-            pos = orig_start + offset
-            result_lines[pos:pos + len(removes)] = adds
-            offset += len(adds) - len(removes)
+                if not line:
+                    result_pos += 1
+                    continue
+                ch = line[0]
+                content = line[1:] if len(line) > 1 else "\n"
+                if ch == " ":          # context — advance past it
+                    result_pos += 1
+                elif ch == "-":        # remove — delete from result, don't advance
+                    del result_lines[result_pos]
+                    offset -= 1
+                elif ch == "+":        # add — insert before current position
+                    result_lines.insert(result_pos, content)
+                    result_pos += 1
+                    offset += 1
 
         return "".join(result_lines)
     except Exception:

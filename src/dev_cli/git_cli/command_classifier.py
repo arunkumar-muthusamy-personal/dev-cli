@@ -42,7 +42,8 @@ def classify(command: str) -> GitRisk:
         return GitRisk.MODIFY
 
     sub = tokens[0].lower()
-    flags = {t.lower() for t in tokens[1:]}
+    # Preserve case: git flags like -D (force-delete branch) are case-sensitive
+    flags = set(tokens[1:])
 
     if sub in _DESTRUCTIVE_SUBCOMMANDS:
         return GitRisk.DESTRUCTIVE

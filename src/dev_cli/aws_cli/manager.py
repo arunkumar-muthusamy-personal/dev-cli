@@ -28,7 +28,7 @@ _INTENT_MAP: list[tuple[re.Pattern, str]] = [
     # Lambda
     (re.compile(r"lambda.{0,20}(config|env|environment|variable)", re.I),
      "lambda get-function-configuration --function-name {function_name}"),
-    (re.compile(r"lambda.{0,20}(list|all)", re.I),
+    (re.compile(r"lambda.{0,20}(list|all)|(list|show).{0,20}lambda", re.I),
      "lambda list-functions"),
     (re.compile(r"invoke.{0,20}lambda|lambda.{0,20}invoke", re.I),
      "lambda invoke --function-name {function_name} --payload '{}' /dev/null"),
@@ -60,7 +60,7 @@ _INTENT_MAP: list[tuple[re.Pattern, str]] = [
     (re.compile(r"(list|show|describe).{0,15}stack", re.I),
      "cloudformation list-stacks"),
     # General
-    (re.compile(r"aws (region|account|caller|identity|who am i)", re.I),
+    (re.compile(r"(aws.{0,10}(region|account|caller|identity)|who am i.{0,20}aws)", re.I),
      "sts get-caller-identity"),
 ]
 
@@ -76,8 +76,9 @@ def detect_aws_intent(message: str) -> str | None:
 def is_aws_related(message: str) -> bool:
     """Quick check: does the message seem to be asking about AWS resources?"""
     keywords = re.compile(
-        r"\b(aws|lambda|s3|ec2|rds|iam|cloudwatch|log|dynamo|ecs|fargate|"
-        r"cloudformation|bucket|instance|function|stack|permission|role|policy)\b",
+        r"\b(aws|lambda|s3|ec2|rds|iam|cloudwatch|cloudformation|"
+        r"dynamodb|dynamo|ecs|fargate|bucket|stack|permission|role|policy|"
+        r"log\s+group|security\s+group)\b",
         re.I,
     )
     return bool(keywords.search(message))

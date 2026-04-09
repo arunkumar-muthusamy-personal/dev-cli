@@ -10,7 +10,7 @@ _INTENT_MAP: list[tuple[re.Pattern, str]] = [
     # ── Status / info ──────────────────────────────────────────────────
     (re.compile(r"\b(what.s changed|show changes|git status|current status)\b", re.I),
      "git status"),
-    (re.compile(r"\b(show|view|list).{0,15}(recent |last )?(commit|log|history)\b", re.I),
+    (re.compile(r"\b(show|view|list).{0,15}(recent |last )?(commit|log|history)", re.I),
      "git log --oneline -15"),
     (re.compile(r"\bfull log\b", re.I),
      "git log --oneline -30"),
@@ -90,7 +90,7 @@ _INTENT_MAP: list[tuple[re.Pattern, str]] = [
      "git fetch --all"),
 
     # ── Stash ──────────────────────────────────────────────────────────
-    (re.compile(r"\bstash.{0,20}(my |the )?(change|work)\b", re.I),
+    (re.compile(r"\bstash.{0,20}(my |the )?(change|work)", re.I),
      "git stash"),
     (re.compile(r"\b(pop|apply|restore).{0,15}stash\b", re.I),
      "git stash pop"),
