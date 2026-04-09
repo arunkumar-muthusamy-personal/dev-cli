@@ -39,18 +39,19 @@ async def test_invoke_returns_text(mock_client: LLMClient) -> None:
 
 
 async def test_stream_yields_tokens(mock_client: LLMClient) -> None:
-    async def fake_text_stream():
-        for token in ["Hello", ",", " world", "!"]:
-            yield token
+    def make_chunk(text):
+        chunk = MagicMock()
+        chunk.choices = [MagicMock(delta=MagicMock(content=text))]
+        return chunk
 
-    mock_stream_ctx = MagicMock()
-    mock_stream_ctx.__aenter__ = AsyncMock(return_value=MagicMock(text_stream=fake_text_stream()))
-    mock_stream_ctx.__aexit__ = AsyncMock(return_value=False)
+    async def fake_stream():
+        for token in ["Hello", ",", " world", "!"]:
+            yield make_chunk(token)
 
     with patch.object(
         mock_client._client.chat.completions,
-        "stream",
-        return_value=mock_stream_ctx,
+        "create",
+        new=AsyncMock(return_value=fake_stream()),
     ):
         tokens = []
         async for token in mock_client.stream(

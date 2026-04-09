@@ -58,13 +58,16 @@ class LLMClient:
         full_messages = [{"role": "system", "content": system_prompt}, *messages]
 
         try:
-            async with self._client.chat.completions.stream(
+            response = await self._client.chat.completions.create(
                 model=self._model,
                 messages=full_messages,  # type: ignore[arg-type]
                 max_tokens=max_tokens or settings.llm_max_tokens,
                 temperature=temperature or settings.llm_temperature,
-            ) as stream:
-                async for text in stream.text_stream:
+                stream=True,
+            )
+            async for chunk in response:
+                text = chunk.choices[0].delta.content if chunk.choices else None
+                if text:
                     yield text
 
         except APIConnectionError as e:
