@@ -53,3 +53,6 @@ app.command("chat")(chat_command)
 app.command("analyze")(analyze_command)
 app.command("context")(context_command)
 app.command("status")(status_command)
+
+if __name__ == "__main__":
+    app()

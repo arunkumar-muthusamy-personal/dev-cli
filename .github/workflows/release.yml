@@ -36,8 +36,16 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ['3.11']
+        include:
+          - os: ubuntu-latest
+            binary_name: dev-cli-linux
+            artifact_name: dev-cli-ubuntu-latest
+          - os: macos-latest
+            binary_name: dev-cli-macos
+            artifact_name: dev-cli-macos-latest
+          - os: windows-latest
+            binary_name: dev-cli-windows
+            artifact_name: dev-cli-windows-latest
 
     steps:
       - name: Checkout code
@@ -46,7 +54,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -54,24 +62,24 @@ jobs:
           pip install pyinstaller
           pip install -e ".[dev]"
 
-      - name: Build executable (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Build executable (Linux / macOS)
+        if: matrix.os != 'windows-latest'
         run: |
-          pyinstaller --onefile --name dev-cli-linux \
+          pyinstaller --onefile --name ${{ matrix.binary_name }} \
             --collect-all dev_cli \
             src/dev_cli/main.py
 
       - name: Build executable (Windows)
         if: matrix.os == 'windows-latest'
         run: |
-          pyinstaller --onefile --name dev-cli-windows `
+          pyinstaller --onefile --console --name ${{ matrix.binary_name }} `
             --collect-all dev_cli `
             src/dev_cli/main.py
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: dev-cli-${{ matrix.os }}
+          name: ${{ matrix.artifact_name }}
           path: dist/
 
   test:
@@ -107,6 +115,12 @@ jobs:
           name: dev-cli-ubuntu-latest
           path: dist/
 
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dev-cli-macos-latest
+          path: dist/
+
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
@@ -119,6 +133,7 @@ jobs:
           generate_release_notes: true
           files: |
             dist/dev-cli-linux
+            dist/dev-cli-macos
             dist/dev-cli-windows.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
