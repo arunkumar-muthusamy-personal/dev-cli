@@ -35,11 +35,18 @@ class LLMClient:
         base_url: str | None = None,
         api_key: str | None = None,
     ) -> None:
-        settings = get_settings()
-        self._model = model or settings.llm_model
+        # Only load (and validate) settings when a value isn't supplied directly.
+        # This allows tests and callers that pass all three args to skip validation.
+        if model is None or base_url is None or api_key is None:
+            settings = get_settings()
+            model    = model    or settings.llm_model
+            base_url = base_url or settings.llm_base_url
+            api_key  = api_key  or settings.llm_api_key
+
+        self._model = model
         self._client = AsyncOpenAI(
-            api_key=api_key or settings.llm_api_key or "ollama",  # Ollama ignores the key
-            base_url=base_url or settings.llm_base_url,
+            api_key=api_key or "ollama",  # Ollama ignores the key
+            base_url=base_url,
         )
 
     # ------------------------------------------------------------------
