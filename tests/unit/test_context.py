@@ -87,7 +87,7 @@ class TestFileContextReader:
     def test_intent_pattern_test(self, tmp_path):
         (tmp_path / "test_foo.py").write_text("# tests here")
         reader = FileContextReader(tmp_path)
-        ctx = reader.build("can you fix the test")
+        ctx = reader.build("can you help me run the unit tests")
         assert any("test" in k for k in ctx.files)
 
     def test_intent_pattern_config(self, tmp_path):

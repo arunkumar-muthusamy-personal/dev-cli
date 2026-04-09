@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 
+import httpx
 from openai import APIConnectionError, APIError, APIStatusError, AsyncOpenAI
 
 from dev_cli.config import get_settings
@@ -34,19 +35,23 @@ class LLMClient:
         model: str | None = None,
         base_url: str | None = None,
         api_key: str | None = None,
+        verify_ssl: bool | None = None,
     ) -> None:
         # Only load (and validate) settings when a value isn't supplied directly.
         # This allows tests and callers that pass all three args to skip validation.
-        if model is None or base_url is None or api_key is None:
+        if model is None or base_url is None or api_key is None or verify_ssl is None:
             settings = get_settings()
-            model    = model    or settings.llm_model
-            base_url = base_url or settings.llm_base_url
-            api_key  = api_key  or settings.llm_api_key
+            model      = model      or settings.llm_model
+            base_url   = base_url   or settings.llm_base_url
+            api_key    = api_key    or settings.llm_api_key
+            if verify_ssl is None:
+                verify_ssl = settings.llm_verify_ssl
 
         self._model = model
         self._client = AsyncOpenAI(
             api_key=api_key or "ollama",  # Ollama ignores the key
             base_url=base_url,
+            http_client=httpx.AsyncClient(verify=verify_ssl),
         )
 
     # ------------------------------------------------------------------

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # --- Paths ---
@@ -44,6 +46,10 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="gpt-4o", description="Model ID for the chosen provider")
     llm_max_tokens: int = Field(default=4096)
     llm_temperature: float = Field(default=0.7)
+    llm_verify_ssl: bool = Field(
+        default=True,
+        description="Verify SSL certificates. Set to false for self-signed certs (e.g. vLLM dev servers).",
+    )
 
     # --- Backend proxy (Phase 2) ---
     api_endpoint: str = Field(default="https://api.internal.company.com")
@@ -101,6 +107,20 @@ class Settings(BaseSettings):
         return self
 
 
+def _env_file_paths() -> list[str]:
+    """Return .env search paths: CWD first, then binary directory (for standalone builds)."""
+    cwd_env = Path.cwd() / ".env"
+    paths = [str(cwd_env)]
+
+    # When running as a PyInstaller frozen binary, also check next to the executable
+    if getattr(sys, "frozen", False):
+        binary_env = Path(sys.executable).parent / ".env"
+        if binary_env.resolve() != cwd_env.resolve():
+            paths.append(str(binary_env))
+
+    return paths
+
+
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    return Settings()
+    return Settings(_env_file=_env_file_paths())

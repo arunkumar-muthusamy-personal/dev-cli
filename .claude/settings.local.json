@@ -3,7 +3,14 @@
     "allow": [
       "Bash(xargs sed:*)",
       "Bash(python -m pytest tests/ -q --tb=no)",
-      "Bash(python -m ruff check src/ tests/)"
+      "Bash(python -m ruff check src/ tests/)",
+      "Bash(python -c ':*)",
+      "Bash(python -c \"from dev_cli.config import Settings; print\\('ok'\\)\")",
+      "Bash(pip show:*)",
+      "Bash(python -m pytest tests/unit/test_shell.py -q --tb=short)",
+      "Bash(pip install:*)",
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(python -m pytest tests/ -q)"
     ]
   }
 }
