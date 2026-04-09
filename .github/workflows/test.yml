@@ -8,8 +8,8 @@ on:
 
 env:
   DEV_CLI_LLM_BASE_URL: "https://api.openai.com/v1"
-  DEV_CLI_LLM_API_KEY: ""
-  DEV_CLI_LLM_MODEL: ""
+  DEV_CLI_LLM_API_KEY: "placeholder-for-tests"
+  DEV_CLI_LLM_MODEL: "gpt-4o"
 
 jobs:
   test:
