@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(python -m pytest tests/ -q --tb=no)",
+      "Bash(python -m ruff check src/ tests/)"
     ]
   }
 }

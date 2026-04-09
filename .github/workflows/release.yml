@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'   # triggers on version tags like v0.1.0
 
+env:
+  DEV_CLI_LLM_BASE_URL: "https://api.openai.com/v1"
+  DEV_CLI_LLM_API_KEY: ""
+  DEV_CLI_LLM_MODEL: ""
+
 jobs:
   validate-version:
     runs-on: ubuntu-latest

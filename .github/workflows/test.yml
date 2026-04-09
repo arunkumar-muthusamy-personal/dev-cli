@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, master]
 
+env:
+  DEV_CLI_LLM_BASE_URL: "https://api.openai.com/v1"
+  DEV_CLI_LLM_API_KEY: ""
+  DEV_CLI_LLM_MODEL: ""
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
