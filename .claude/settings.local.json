@@ -10,7 +10,11 @@
       "Bash(python -m pytest tests/unit/test_shell.py -q --tb=short)",
       "Bash(pip install:*)",
       "Bash(python -m pytest tests/ -v)",
-      "Bash(python -m pytest tests/ -q)"
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(python -m ruff check src/dev_cli/commands/chat.py src/dev_cli/prompts/base.py)",
+      "Bash(python -m ruff check src/dev_cli/commands/chat.py src/dev_cli/llm/streaming.py src/dev_cli/config.py)",
+      "Bash(python -m ruff check src/dev_cli/context/file_writer.py src/dev_cli/prompts/base.py)",
+      "Bash(python -m ruff check src/dev_cli/commands/chat.py src/dev_cli/context/file_reader.py)"
     ]
   }
 }

@@ -62,6 +62,9 @@ class Settings(BaseSettings):
         default=3600, description="Seconds before re-scanning project manifest"
     )
 
+    # --- UI ---
+    show_hints: bool = Field(default=True, description="Show the bottom toolbar with key hints")
+
     # --- Logging ---
     log_level: str = Field(default="INFO")
     verbose: bool = Field(default=False)

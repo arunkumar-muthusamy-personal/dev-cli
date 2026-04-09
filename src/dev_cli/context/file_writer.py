@@ -65,6 +65,14 @@ _DIFF_TO   = re.compile(r"^\+\+\+\s+(?:b/)?([\w./\\-]+)", re.MULTILINE)
 
 # Extract a filename from a user message like "create foo.py" or "make a file called bar/baz.ts"
 _USER_MSG_PATH = re.compile(r"(?:create|make|write|add|generate|new)\s+(?:a\s+)?(?:file\s+(?:called\s+|named\s+)?)?([^\s]+\.\w+)", re.IGNORECASE)
+# Detect creation intent in user message (no explicit filename required)
+_CREATE_INTENT = re.compile(r"\b(create|write|generate|make|scaffold|add|build)\b", re.IGNORECASE)
+# Languages whose unnamed blocks are candidates for file creation
+_CODE_LANGS = frozenset({
+    "python", "py", "javascript", "js", "typescript", "ts", "tsx", "jsx",
+    "bash", "sh", "shell", "sql", "hcl", "terraform", "go", "rust", "java",
+    "css", "html", "yaml", "yml", "json", "toml",
+})
 
 _WRITABLE_EXTENSIONS = frozenset({
     ".py", ".ts", ".tsx", ".js", ".jsx",
@@ -284,6 +292,11 @@ class FileWriter:
 
     def _prompt_and_write(self, response: str, user_message: str | None = None) -> list[str]:
         files = parse_files(response, project_root=self._root, user_message=user_message)
+
+        # Fallback: LLM produced code but forgot to include filenames
+        if not files and user_message and _CREATE_INTENT.search(user_message):
+            files = self._recover_unnamed_blocks(response)
+
         if not files:
             return []
 
@@ -353,6 +366,49 @@ class FileWriter:
         return written
 
     # ------------------------------------------------------------------
+
+    def _recover_unnamed_blocks(self, response: str) -> list[DetectedFile]:
+        """Last-resort fallback: find substantial unnamed code blocks and ask for filenames."""
+        results: list[DetectedFile] = []
+        for match in _CODE_BLOCK.finditer(response):
+            lang        = (match.group("lang") or "").strip().lower()
+            inline_path = (match.group("inline_path") or "").strip()
+            body        = match.group("body")
+
+            if inline_path:
+                continue  # already has a path — handled by parse_files
+            if lang not in _CODE_LANGS:
+                continue
+            if body.count("\n") < 4:
+                continue  # too short to be a meaningful file
+
+            preview = body.strip().splitlines()[0][:60]
+            self._console.print(
+                f"\n[yellow]Code block detected[/yellow] ([dim]{lang}[/dim]) — no filename in response.\n"
+                f"  [dim]{preview}…[/dim]"
+            )
+            raw = Prompt.ask(
+                "  Save as (relative path, e.g. weather/get_weather.py — or leave empty to skip)",
+                default="",
+                console=self._console,
+            ).strip()
+
+            if not raw or not _is_writable(raw):
+                continue
+
+            content = body.rstrip("\n") + "\n"
+            action  = FileAction.REPLACE if (self._root / raw).exists() else FileAction.CREATE
+            diff_preview = ""
+            if action == FileAction.REPLACE:
+                dest = self._root / raw
+                old_lines = dest.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+                diff_preview = "".join(difflib.unified_diff(
+                    old_lines, content.splitlines(keepends=True),
+                    fromfile=f"a/{raw}", tofile=f"b/{raw}", n=3,
+                ))
+            results.append(DetectedFile(path=raw, content=content, language=lang,
+                                        action=action, diff_preview=diff_preview))
+        return results
 
     def _apply_patch_file(self, f: DetectedFile, dest: Path) -> list[str]:
         if not dest.exists():

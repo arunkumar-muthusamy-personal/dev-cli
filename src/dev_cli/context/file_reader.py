@@ -10,6 +10,12 @@ from pathlib import Path
 
 from dev_cli.detectors.utils import find_files, read_file_safe
 
+# Match absolute paths in user messages: C:\Users\... or /home/...
+# No spaces — avoids greedily consuming the rest of the sentence.
+_ABS_PATH_RE = re.compile(
+    r"(?:[A-Za-z]:[\\\/][\w\\\/.-]+|\/[\w\/.-]{3,})"
+)
+
 # Limits
 MAX_FILE_BYTES = 10 * 1024 * 1024   # 10 MB per file
 MAX_TOTAL_BYTES = 50 * 1024 * 1024  # 50 MB total per request
@@ -85,6 +91,28 @@ class FileContextReader:
 
     def __init__(self, project_path: Path) -> None:
         self._root = project_path
+
+    def scan_mentioned_dirs(self, user_message: str) -> str:
+        """Return a directory listing for any absolute paths mentioned in the message."""
+        parts: list[str] = []
+        for match in _ABS_PATH_RE.finditer(user_message):
+            raw = match.group().rstrip(".,!?\"'")
+            p = Path(raw)
+            if p.is_dir():
+                try:
+                    entries = sorted(p.iterdir(), key=lambda e: (e.is_file(), e.name.lower()))
+                    lines = [f"  {'[dir] ' if e.is_dir() else '      '}{e.name}" for e in entries]
+                    parts.append(
+                        f"Contents of `{raw}` ({len(lines)} entries):\n" +
+                        ("\n".join(lines) if lines else "  (empty directory)")
+                    )
+                except PermissionError:
+                    parts.append(f"Cannot read directory: {raw} (permission denied)")
+            elif p.is_file() and self._is_readable(p):
+                content = read_file_safe(p, max_bytes=MAX_FILE_BYTES)
+                if content.strip():
+                    parts.append(f"File `{raw}`:\n```\n{content}\n```")
+        return "\n\n".join(parts)
 
     def build(self, user_message: str, extra_paths: list[str] | None = None) -> FileContext:
         """Return a FileContext populated with files relevant to *user_message*."""

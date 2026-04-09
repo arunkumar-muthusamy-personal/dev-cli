@@ -101,6 +101,17 @@ dev-cli status     Show current config, auth status, and project info
 dev-cli --version  Print version
 ```
 
+### `dev-cli chat` options
+
+| Flag | Description |
+|------|-------------|
+| `--project-path / -p` | Project directory (default: current directory) |
+| `--aws-profile` | AWS profile to use for AWS CLI commands |
+| `--no-history` | Start fresh without loading previous conversation |
+| `--no-files` | Disable automatic file context injection |
+| `--no-hints` | Hide the bottom key-binding toolbar |
+| `--limit / -n` | Max messages to load from history (default: 50) |
+
 ---
 
 ## In-Chat Slash Commands
@@ -127,7 +138,29 @@ dev-cli --version  Print version
 > /run pytest tests/ -q
 > /files src/handler.py src/models.py
 > refactor this service to use async/await
+> can you create a script to parse this CSV file?
 ```
+
+---
+
+## Input & Key Bindings
+
+The chat prompt supports multi-line input and tab completion.
+
+| Key | Action |
+|-----|--------|
+| `Enter` | Send message |
+| `Alt+Enter` (Option+Enter on macOS) | Insert newline (for multi-line input) |
+| `Tab` | Auto-complete slash commands and file paths |
+| `Ctrl+C` | Exit |
+
+**Pasting multi-line text**: paste freely — the entire block lands in the input buffer. Press `Enter` when ready to send.
+
+**Tab completion**: works for slash commands (`/run`, `/files`, etc.) and file paths starting with `./`, `../`, or `~`.
+
+> **macOS note**: To use Option+Enter as a newline, enable "Use Option as Meta key" in your terminal:
+> - **Terminal.app**: Preferences → Profiles → Keyboard → ✓ Use Option as Meta key
+> - **iTerm2**: Preferences → Profiles → Keys → Left Option key → Esc+
 
 ---
 
@@ -144,6 +177,7 @@ All settings use the `DEV_CLI_` prefix and can be set via environment variables 
 | `DEV_CLI_LLM_TEMPERATURE` | `0.7` | Sampling temperature |
 | `DEV_CLI_LLM_VERIFY_SSL` | `true` | Set to `false` to skip SSL verification (self-signed certs) |
 | `DEV_CLI_HISTORY_LIMIT` | `50` | Number of messages loaded from history per session |
+| `DEV_CLI_SHOW_HINTS` | `true` | Show the bottom key-binding toolbar in chat |
 | `DEV_CLI_MANIFEST_TTL_SECONDS` | `3600` | Seconds before re-scanning the project manifest |
 | `DEV_CLI_MODE` | `direct` | `direct` calls the LLM API; `proxy` routes through a backend |
 | `DEV_CLI_LOG_LEVEL` | `INFO` | Log level |

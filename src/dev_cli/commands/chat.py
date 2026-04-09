@@ -5,10 +5,14 @@ import re
 from pathlib import Path
 
 import typer
+from prompt_toolkit import PromptSession
+from prompt_toolkit.completion import Completer, Completion, PathCompleter
+from prompt_toolkit.formatted_text import HTML
+from prompt_toolkit.history import InMemoryHistory
+from prompt_toolkit.key_binding import KeyBindings
 from rich.console import Console
 from rich.markdown import Markdown
 from rich.panel import Panel
-from rich.prompt import Prompt
 
 from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
 from dev_cli.config import get_settings
@@ -36,6 +40,10 @@ _CREATE_INTENT = re.compile(
     r"\b(create|write|generate|make|scaffold|add|init(ialise|ialize)?)\b.{0,80}?\b(file|script|module|class|function|config|template)\b",
     re.I,
 )
+_CREATE_INTENT_LOOSE = re.compile(
+    r"\b(create|write|generate|make|build)\b",
+    re.I,
+)
 _QUESTION_WORDS = re.compile(
     r"^\s*(what|how|why|when|where|which|who|can you give|give me|show me|what'?s|whats|is there|are there|do you|could you|would you|tell me)",
     re.I,
@@ -44,6 +52,9 @@ _QUESTION_WORDS = re.compile(
 def _is_question(message: str) -> bool:
     """Return True if the message looks like a question rather than a file-creation request."""
     if _CREATE_INTENT.search(message):
+        return False
+    # "can you create it?" / "can you make one?" end with ? but are creation requests
+    if _CREATE_INTENT_LOOSE.search(message) and message.strip().endswith("?"):
         return False
     return bool(_QUESTION_WORDS.search(message) or message.strip().endswith("?"))
 
@@ -62,6 +73,65 @@ _HELP_TEXT = """
 """
 
 
+# ---------------------------------------------------------------------------
+# prompt_toolkit input — multi-line paste + tab completion
+# ---------------------------------------------------------------------------
+
+_SLASH_CMDS = [
+    "/help", "/history", "/clear", "/context", "/analyze",
+    "/run", "/git", "/aws", "/files", "/exit", "/quit",
+]
+
+
+class _ChatCompleter(Completer):
+    """Tab-complete slash commands and file paths."""
+
+    def __init__(self, project_root: Path) -> None:
+        self._path = PathCompleter(expanduser=True)
+        self._root = project_root
+
+    def get_completions(self, document, complete_event):
+        text = document.text_before_cursor
+
+        # Slash command completion (no space yet)
+        if text.startswith("/") and " " not in text:
+            for cmd in _SLASH_CMDS:
+                if cmd.startswith(text):
+                    yield Completion(cmd[len(text):], display=cmd)
+            return
+
+        # Path completion: after /run or /files, or when the current word starts with ./ or /
+        word = document.get_word_before_cursor(WORD=True)
+        in_path_cmd = any(text.startswith(c + " ") for c in ("/run", "/files"))
+        is_path_word = word.startswith(("./", "../", "/", "~"))
+        if in_path_cmd or is_path_word:
+            from prompt_toolkit.document import Document as _Doc
+            yield from self._path.get_completions(_Doc(word, len(word)), complete_event)
+
+
+def _make_session(project_root: Path) -> PromptSession:
+    kb = KeyBindings()
+
+    @kb.add("enter")
+    def _send(event):
+        """Enter submits the message."""
+        event.current_buffer.validate_and_handle()
+
+    @kb.add("escape", "enter")  # Alt+Enter / Option+Enter on macOS
+    def _newline(event):
+        """Alt+Enter inserts a newline (for typing multi-line manually)."""
+        event.current_buffer.insert_text("\n")
+
+    return PromptSession(
+        history=InMemoryHistory(),
+        completer=_ChatCompleter(project_root),
+        complete_while_typing=False,
+        multiline=True,
+        prompt_continuation=lambda _w, _ln, _sw: "  ",
+        key_bindings=kb,
+    )
+
+
 def chat_command(
     project_path: Path = typer.Option(
         Path("."), "--project-path", "-p", resolve_path=True
@@ -69,10 +139,11 @@ def chat_command(
     aws_profile: str | None = typer.Option(None, "--aws-profile", help="AWS profile to use"),
     no_history: bool = typer.Option(False, "--no-history", help="Start fresh without loading history"),
     no_files: bool = typer.Option(False, "--no-files", help="Disable automatic file context"),
+    no_hints: bool = typer.Option(False, "--no-hints", help="Hide the bottom key-binding toolbar"),
     limit: int = typer.Option(50, "--limit", "-n", help="Max messages to load from history"),
 ) -> None:
     """Start an interactive AI chat session for this project."""
-    asyncio.run(_chat(project_path, aws_profile, no_history, no_files, limit))
+    asyncio.run(_chat(project_path, aws_profile, no_history, no_files, no_hints, limit))
 
 
 async def _chat(
@@ -80,6 +151,7 @@ async def _chat(
     aws_profile: str | None,
     no_history: bool,
     no_files: bool,
+    no_hints: bool,
     limit: int,
 ) -> None:
     settings = get_settings()
@@ -132,12 +204,18 @@ async def _chat(
     renderer = StreamingRenderer(console=console)
     system_prompt = build_system_prompt(manifest)
 
-    console.print("[dim]Type your question or /help. Ctrl+C to exit.[/dim]\n")
+    console.print("[dim]Type your question and press Enter to send. Paste multi-line text freely. Ctrl+C to exit.[/dim]\n")
+
+    session = _make_session(project_path)
+    show_hints = settings.show_hints and not no_hints
+    toolbar = HTML(" <b>Enter</b>=send  <b>Alt+Enter</b>=newline  <b>Tab</b>=complete  <b>/help</b>=commands ") if show_hints else None
 
     # --- REPL ---
     while True:
         try:
-            user_input = Prompt.ask("[bold green]>[/bold green]", console=console).strip()
+            user_input = (
+                await session.prompt_async(HTML("<ansigreen><b>❯ </b></ansigreen>"), bottom_toolbar=toolbar)
+            ).strip()
         except (KeyboardInterrupt, EOFError):
             console.print("\n[dim]Goodbye![/dim]")
             break
@@ -166,6 +244,12 @@ async def _chat(
         # --- Build enriched user message with file + AWS context ---
         extra_context_parts: list[str] = [user_input]
 
+        # 0. Scan any absolute directory/file paths mentioned in the message
+        if not user_input.startswith("["):
+            dir_listing = file_reader.scan_mentioned_dirs(user_input)
+            if dir_listing:
+                extra_context_parts.append(dir_listing)
+
         # 0a. File operation detection — "delete X", "rename X to Y"
         if not user_input.startswith("["):
             file_op = detect_file_op(user_input)
@@ -187,14 +271,16 @@ async def _chat(
 
         # 1. File context (auto, unless disabled, slash-injected, or pure knowledge question)
         if not no_files and not user_input.startswith("[") and not _is_question(user_input):
-            file_ctx = file_reader.build(user_input)
+            with console.status("[dim]Reading files…[/dim]", spinner="dots"):
+                file_ctx = file_reader.build(user_input)
             if file_ctx.files:
                 console.print(f"[dim]Including files: {file_ctx.summary}[/dim]")
                 extra_context_parts.append(file_ctx.to_prompt_block())
 
         # 2. Git context (auto-detect git intents)
         if is_git_related(user_input) and not user_input.startswith("["):
-            git_result = await git_manager.run_from_message(user_input)
+            with console.status("[dim]Running git…[/dim]", spinner="dots"):
+                git_result = await git_manager.run_from_message(user_input)
             if git_result:
                 extra_context_parts.append(git_result.to_context_block())
 
@@ -202,7 +288,8 @@ async def _chat(
         if is_aws_related(user_input) and not user_input.startswith("["):
             intent = detect_aws_intent(user_input)
             if intent and "{" not in intent:  # skip templates needing placeholders
-                aws_result = await aws_manager.run(intent, auto_confirm=False)
+                with console.status("[dim]Running AWS CLI…[/dim]", spinner="dots"):
+                    aws_result = await aws_manager.run(intent, auto_confirm=False)
                 if aws_result:
                     extra_context_parts.append(aws_result.to_context_block())
 
@@ -211,6 +298,13 @@ async def _chat(
         # If the user is asking a question (not requesting file creation), tell the LLM explicitly
         if _is_question(user_input):
             enriched_message += "\n\n[IMPORTANT: This is a question — respond with inline commands or explanations only. Do NOT produce any file output or scripts.]"
+        elif not user_input.startswith("[") and _CREATE_INTENT_LOOSE.search(user_input):
+            enriched_message += (
+                "\n\n[INSTRUCTION: The user wants you to CREATE actual code. "
+                "Generate the COMPLETE file content now. "
+                "ALWAYS use the ### `filename.ext` header before the code block. "
+                "Do NOT give instructions or tutorials — write the actual working code.]"
+            )
 
         # Save original user input (not enriched) for display
         if enriched_message != user_input:
