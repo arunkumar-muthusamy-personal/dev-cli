@@ -136,7 +136,11 @@ def parse_files(response: str, project_root: Path | None = None, user_message: s
             user_message_path = um.group(1)
 
     results: list[DetectedFile] = []
-    seen: set[str] = set()
+    seen: set[str] = set()  # normalized paths to avoid duplicates
+
+    def _normalize(p: str) -> str:
+        """Strip leading ./ and normalize separators for dedup."""
+        return str(Path(p))
 
     for match in _CODE_BLOCK.finditer(response):
         lang        = (match.group("lang") or "").strip()
@@ -147,8 +151,8 @@ def parse_files(response: str, project_root: Path | None = None, user_message: s
         # --- Diff block? ---
         if lang == "diff" or _is_diff_block(body):
             path = _diff_target_path(body)
-            if path and path not in seen:
-                seen.add(path)
+            if path and _normalize(path) not in seen:
+                seen.add(_normalize(path))
                 results.append(DetectedFile(
                     path=path,
                     content=body,
@@ -173,14 +177,14 @@ def parse_files(response: str, project_root: Path | None = None, user_message: s
                     body = "\n".join(stripped_lines[i + 1:]).lstrip("\n")
                     break
 
-        if not file_path or file_path in seen:
+        if not file_path or _normalize(file_path) in seen:
             # Last resort: use filename extracted from user's message (only once)
-            if not file_path and user_message_path and user_message_path not in seen:
+            if not file_path and user_message_path and _normalize(user_message_path) not in seen:
                 file_path = user_message_path
                 user_message_path = None  # consume it so only one block gets it
             else:
                 continue
-        seen.add(file_path)
+        seen.add(_normalize(file_path))
 
         content = body.rstrip("\n") + "\n"
         action  = FileAction.CREATE

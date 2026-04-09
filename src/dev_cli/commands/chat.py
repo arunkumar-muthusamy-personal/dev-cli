@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import re
 from pathlib import Path
 
 import typer
@@ -26,6 +27,25 @@ from dev_cli.storage.conversation import ConversationDB
 from dev_cli.storage.manifest import ManifestStore
 
 console = Console()
+
+# ---------------------------------------------------------------------------
+# Intent helpers
+# ---------------------------------------------------------------------------
+
+_CREATE_INTENT = re.compile(
+    r"\b(create|write|generate|make|scaffold|add|init(ialise|ialize)?)\b.{0,80}?\b(file|script|module|class|function|config|template)\b",
+    re.I,
+)
+_QUESTION_WORDS = re.compile(
+    r"^\s*(what|how|why|when|where|which|who|can you give|give me|show me|what'?s|whats|is there|are there|do you|could you|would you|tell me)",
+    re.I,
+)
+
+def _is_question(message: str) -> bool:
+    """Return True if the message looks like a question rather than a file-creation request."""
+    if _CREATE_INTENT.search(message):
+        return False
+    return bool(_QUESTION_WORDS.search(message) or message.strip().endswith("?"))
 
 _HELP_TEXT = """
 [bold cyan]In-chat commands:[/bold cyan]
@@ -165,8 +185,8 @@ async def _chat(
                         extra_context_parts.append(result.to_context_block())
                         console.print()
 
-        # 1. File context (auto, unless disabled or message is slash-injected output)
-        if not no_files and not user_input.startswith("["):
+        # 1. File context (auto, unless disabled, slash-injected, or pure knowledge question)
+        if not no_files and not user_input.startswith("[") and not _is_question(user_input):
             file_ctx = file_reader.build(user_input)
             if file_ctx.files:
                 console.print(f"[dim]Including files: {file_ctx.summary}[/dim]")
@@ -187,6 +207,10 @@ async def _chat(
                     extra_context_parts.append(aws_result.to_context_block())
 
         enriched_message = "\n\n".join(extra_context_parts)
+
+        # If the user is asking a question (not requesting file creation), tell the LLM explicitly
+        if _is_question(user_input):
+            enriched_message += "\n\n[IMPORTANT: This is a question — respond with inline commands or explanations only. Do NOT produce any file output or scripts.]"
 
         # Save original user input (not enriched) for display
         if enriched_message != user_input:

@@ -33,7 +33,7 @@ _INTENT_MAP: list[tuple[re.Pattern, str]] = [
     (re.compile(r"invoke.{0,20}lambda|lambda.{0,20}invoke", re.I),
      "lambda invoke --function-name {function_name} --payload '{}' /dev/null"),
     # IAM
-    (re.compile(r"(my |current )?(permission|policy|role|iam)", re.I),
+    (re.compile(r"(show|get|describe|what are).{0,20}(my |current )?(permission|role|policy)", re.I),
      "iam get-user"),
     (re.compile(r"list.{0,15}(role|roles)", re.I),
      "iam list-roles"),

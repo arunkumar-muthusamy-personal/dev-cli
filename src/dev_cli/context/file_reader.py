@@ -30,13 +30,13 @@ CODE_EXTENSIONS = frozenset({
 
 # Keywords that map to file patterns
 _INTENT_PATTERNS: list[tuple[re.Pattern, list[str]]] = [
-    (re.compile(r"\blambda\b|\bhandler\b", re.I),       ["handler.py", "lambda*.py", "*.py"]),
-    (re.compile(r"\btest\b|\bspec\b", re.I),             ["test_*.py", "*.test.*", "*.spec.*"]),
+    (re.compile(r"\b(lambda\s+function|lambda\s+handler|lambda\s+code|handler\.py)\b", re.I), ["handler.py", "lambda*.py"]),
+    (re.compile(r"\b(run\s+tests?|unit\s+tests?|write\s+tests?|test\s+file|test\s+suite|pytest|jest|spec\s+file)\b", re.I), ["test_*.py", "*.test.*", "*.spec.*"]),
     (re.compile(r"\bconfig\b|\bsetting\b", re.I),        ["config.*", "settings.*", "*.yaml", "*.toml"]),
     (re.compile(r"\bdocker\b|\bcontainer\b", re.I),      ["Dockerfile*", "docker-compose*"]),
     (re.compile(r"\bterraform\b|\binfra\b|\btf\b", re.I),["*.tf", "*.tfvars"]),
     (re.compile(r"\bschema\b|\bdatabase\b|\bdb\b", re.I),["schema.*", "models.*", "migration*"]),
-    (re.compile(r"\bapi\b|\broute\b|\bendpoint\b", re.I),["router*", "routes*", "api*", "views*"]),
+    (re.compile(r"\b(api\s+route|api\s+endpoint|rest\s+api|router|routes)\b", re.I),["router*", "routes*", "api*", "views*"]),
     (re.compile(r"\bpackage\b|\bdependenc\b", re.I),     ["package.json", "requirements.txt", "pyproject.toml"]),
     (re.compile(r"\bci\b|\bpipeline\b|\bgithub\b", re.I),["*.yml", "*.yaml"]),
 ]
@@ -109,11 +109,13 @@ class FileContextReader:
                 for g in globs:
                     candidates.extend(find_files(self._root, g))
 
-        # 4. Fallback: key files from project root
-        for name in ["main.py", "app.py", "index.ts", "index.js", "README.md"]:
-            p = self._root / name
-            if p.exists():
-                candidates.append(p)
+        # 4. Fallback: only include key root files if nothing else was found
+        if not candidates:
+            for name in ["main.py", "app.py", "index.ts", "index.js", "README.md"]:
+                p = self._root / name
+                if p.exists():
+                    candidates.append(p)
+                    break  # just one fallback file
 
         # Deduplicate preserving order
         seen: set[Path] = set()
