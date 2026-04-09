@@ -9,11 +9,15 @@ from rich.markdown import Markdown
 from rich.panel import Panel
 from rich.prompt import Prompt
 
+from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
+from dev_cli.config import get_settings
+from dev_cli.context.file_reader import FileContextReader
+from dev_cli.detectors.detector import ProjectDetector
 from dev_cli.llm.client import LLMClient, LLMError
 from dev_cli.llm.streaming import StreamingRenderer
-from dev_cli.config import get_settings
-from dev_cli.detectors.detector import ProjectDetector
 from dev_cli.prompts.base import build_system_prompt
+from dev_cli.shell.runner import ShellRunner
+from dev_cli.shell.task_detector import detect_task, resolve_command
 from dev_cli.storage.conversation import ConversationDB
 from dev_cli.storage.manifest import ManifestStore
 
@@ -21,12 +25,15 @@ console = Console()
 
 _HELP_TEXT = """
 [bold cyan]In-chat commands:[/bold cyan]
-  /history   Show conversation history
-  /clear     Clear conversation history
-  /context   Show project manifest
-  /analyze   Re-scan project
-  /exit      Exit chat (also: /quit, Ctrl+C)
-  /help      Show this help
+  /history        Show conversation history
+  /clear          Clear conversation history
+  /context        Show project manifest
+  /analyze        Re-scan project
+  /run <cmd>      Run a shell command and include output in context
+  /aws <cmd>      Run an AWS CLI command and include output in context
+  /files <paths>  Read specific files into context (space-separated)
+  /exit           Exit chat (also: /quit, Ctrl+C)
+  /help           Show this help
 """
 
 
@@ -34,16 +41,20 @@ def chat_command(
     project_path: Path = typer.Option(
         Path("."), "--project-path", "-p", resolve_path=True
     ),
+    aws_profile: str | None = typer.Option(None, "--aws-profile", help="AWS profile to use"),
     no_history: bool = typer.Option(False, "--no-history", help="Start fresh without loading history"),
+    no_files: bool = typer.Option(False, "--no-files", help="Disable automatic file context"),
     limit: int = typer.Option(50, "--limit", "-n", help="Max messages to load from history"),
 ) -> None:
     """Start an interactive AI chat session for this project."""
-    asyncio.run(_chat(project_path, no_history, limit))
+    asyncio.run(_chat(project_path, aws_profile, no_history, no_files, limit))
 
 
 async def _chat(
     project_path: Path,
+    aws_profile: str | None,
     no_history: bool,
+    no_files: bool,
     limit: int,
 ) -> None:
     settings = get_settings()
@@ -69,6 +80,11 @@ async def _chat(
     if fw_str:
         header += f"  •  {fw_str}"
     console.print(Panel(header, subtitle="dev-cli chat  •  /help for commands", expand=False))
+
+    # --- Tool instances ---
+    file_reader = FileContextReader(project_path)
+    shell_runner = ShellRunner(console=console)
+    aws_manager = AWSCLIManager(console=console, aws_profile=aws_profile)
 
     # --- Conversation storage ---
     db = ConversationDB(project_path)
@@ -101,39 +117,81 @@ async def _chat(
         if not user_input:
             continue
 
-        # Slash commands
+        # --- Slash commands ---
         if user_input.startswith("/"):
-            handled = await _handle_slash(
-                user_input, db, conv.id, manifest, project_path, console
+            result = await _handle_slash(
+                user_input, db, conv.id, manifest, project_path,
+                shell_runner, aws_manager, console,
             )
-            if handled == "exit":
+            if result == "exit":
                 console.print("[dim]Goodbye![/dim]")
                 break
-            continue
+            # If slash command produced tool output, inject it as a user turn
+            if isinstance(result, str) and result:
+                await db.add_message(conv.id, "user", result)
+                messages.append({"role": "user", "content": result})
+                # Fall through to LLM call below
+                user_input = result
+            else:
+                continue
 
-        # Save user message
-        await db.add_message(conv.id, "user", user_input)
-        messages.append({"role": "user", "content": user_input})
+        # --- Build enriched user message with file + AWS context ---
+        extra_context_parts: list[str] = [user_input]
 
-        # Stream response
+        # 0. Dev task detection — "run tests", "build", "lint", etc.
+        if not user_input.startswith("["):
+            task = detect_task(user_input)
+            if task:
+                command = resolve_command(task, project_path, manifest)
+                if command:
+                    result = await shell_runner.run_with_confirm(command, cwd=str(project_path))
+                    if result:
+                        extra_context_parts.append(result.to_context_block())
+                        console.print()
+
+        # 1. File context (auto, unless disabled or message is slash-injected output)
+        if not no_files and not user_input.startswith("["):
+            file_ctx = file_reader.build(user_input)
+            if file_ctx.files:
+                console.print(f"[dim]Including files: {file_ctx.summary}[/dim]")
+                extra_context_parts.append(file_ctx.to_prompt_block())
+
+        # 2. AWS context (auto-detect if message mentions AWS resources)
+        if is_aws_related(user_input) and not user_input.startswith("["):
+            intent = detect_aws_intent(user_input)
+            if intent and "{" not in intent:  # skip templates needing placeholders
+                aws_result = await aws_manager.run(intent, auto_confirm=False)
+                if aws_result:
+                    extra_context_parts.append(aws_result.to_context_block())
+
+        enriched_message = "\n\n".join(extra_context_parts)
+
+        # Save original user input (not enriched) for display
+        if enriched_message != user_input:
+            await db.add_message(conv.id, "user", user_input)
+        else:
+            await db.add_message(conv.id, "user", user_input)
+
+        messages.append({"role": "user", "content": enriched_message})
+
+        # --- Stream LLM response ---
         console.print()
         try:
             token_stream = client.stream(system_prompt=system_prompt, messages=messages)
             response_text = await renderer.render(token_stream)
         except LLMError as e:
             console.print(f"\n[red]Error: {e}[/red]")
-            # Remove the failed user message from in-memory list to avoid corrupting history
             messages.pop()
             continue
 
         console.print()
 
         # Save assistant response
-        estimated_tokens = len(response_text) // 4  # rough estimate
+        estimated_tokens = len(response_text) // 4
         await db.add_message(conv.id, "assistant", response_text, tokens=estimated_tokens)
         messages.append({"role": "assistant", "content": response_text})
 
-        # Trim in-memory history to avoid unbounded growth
+        # Trim in-memory history
         if len(messages) > limit * 2:
             messages = messages[-(limit * 2):]
 
@@ -144,39 +202,77 @@ async def _handle_slash(
     conv_id: str,
     manifest,
     project_path: Path,
+    shell_runner: ShellRunner,
+    aws_manager: AWSCLIManager,
     console: Console,
 ) -> str | None:
-    """Handle slash commands. Returns 'exit' to signal loop exit, None otherwise."""
-    cmd_lower = cmd.lower().split()[0]
+    """Handle slash commands.
+    Returns:
+      'exit'     → exit the chat loop
+      str        → tool output to inject into LLM context
+      None       → handled, no LLM call needed
+    """
+    parts = cmd.strip().split(None, 1)
+    cmd_name = parts[0].lower()
+    cmd_args = parts[1] if len(parts) > 1 else ""
 
-    if cmd_lower in ("/exit", "/quit"):
+    if cmd_name in ("/exit", "/quit"):
         return "exit"
 
-    if cmd_lower == "/help":
+    if cmd_name == "/help":
         console.print(Markdown(_HELP_TEXT))
 
-    elif cmd_lower == "/history":
+    elif cmd_name == "/history":
         from dev_cli.commands.context import _context
         await _context(project_path, limit=20, clear=False, export=None)
 
-    elif cmd_lower == "/clear":
+    elif cmd_name == "/clear":
         confirmed = typer.confirm("Clear conversation history?", default=False)
         if confirmed:
             deleted = await db.clear_conversation(conv_id)
             console.print(f"[green]✓ Cleared {deleted} messages.[/green]")
 
-    elif cmd_lower == "/context":
+    elif cmd_name == "/context":
         console.print_json(manifest.model_dump_json(indent=2))
 
-    elif cmd_lower == "/analyze":
-        from dev_cli.commands.analyze import analyze_command
+    elif cmd_name == "/analyze":
         new_manifest = ProjectDetector().detect(project_path)
         ManifestStore.save(project_path, new_manifest)
         console.print("[green]✓ Project re-analyzed.[/green]")
-        from dev_cli.commands.analyze import analyze_command as _analyze
-        _analyze(project_path=project_path)
+
+    elif cmd_name == "/run":
+        # Run arbitrary shell command and inject output into LLM context
+        if not cmd_args:
+            console.print("[yellow]Usage: /run <command>[/yellow]")
+            return None
+        result = await shell_runner.run_with_confirm(cmd_args, cwd=str(project_path))
+        if result:
+            return f"[Shell command output]\n{result.to_context_block()}"
+
+    elif cmd_name == "/aws":
+        # Run AWS CLI command and inject output
+        if not cmd_args:
+            console.print("[yellow]Usage: /aws <subcommand>[/yellow]")
+            return None
+        result = await aws_manager.run(cmd_args)
+        if result:
+            return f"[AWS CLI output]\n{result.to_context_block()}"
+
+    elif cmd_name == "/files":
+        # Read specific files into context
+        if not cmd_args:
+            console.print("[yellow]Usage: /files <path1> <path2> ...[/yellow]")
+            return None
+        file_paths = cmd_args.split()
+        reader = FileContextReader(project_path)
+        file_ctx = reader.read_explicit(file_paths)
+        if file_ctx.files:
+            console.print(f"[green]✓ Loaded: {file_ctx.summary}[/green]")
+            return f"[File contents loaded]\n{file_ctx.to_prompt_block()}"
+        else:
+            console.print("[yellow]No readable files found at those paths.[/yellow]")
 
     else:
-        console.print(f"[yellow]Unknown command: {cmd}. Type /help.[/yellow]")
+        console.print(f"[yellow]Unknown command: {cmd_name}. Type /help.[/yellow]")
 
     return None
