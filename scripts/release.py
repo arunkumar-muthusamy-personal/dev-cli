@@ -65,7 +65,7 @@ def main() -> None:
 
     # 2. Stage + commit
     run(f'git add pyproject.toml')
-    run(f'git commit -m "chore: bump version to {new_version}"')
+    run(f'git commit -m "bump version to {new_version}"')
 
     # 3. Create annotated tag
     run(f'git tag -a {tag} -m "Release {tag}"')
