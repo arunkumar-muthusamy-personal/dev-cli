@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from dev_cli.detectors.utils import find_files, parse_json_file, read_file_safe
+from dev_cli.detectors.utils import find_files, read_file_safe
 from dev_cli.storage.models import LanguageDetection
 
 _FRAMEWORK_MARKERS: dict[str, list[str]] = {

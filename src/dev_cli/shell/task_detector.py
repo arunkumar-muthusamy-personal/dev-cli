@@ -6,8 +6,8 @@ letting the LLM just describe how to do it.
 """
 from __future__ import annotations
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 from dev_cli.storage.models import ProjectManifest
 

@@ -11,12 +11,12 @@ from rich.prompt import Prompt
 
 from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
 from dev_cli.config import get_settings
-from dev_cli.git_cli.intent_detector import is_git_related
-from dev_cli.git_cli.manager import GitManager
 from dev_cli.context.file_ops import FileOpsManager, detect_file_op
 from dev_cli.context.file_reader import FileContextReader
 from dev_cli.context.file_writer import FileWriter
 from dev_cli.detectors.detector import ProjectDetector
+from dev_cli.git_cli.intent_detector import is_git_related
+from dev_cli.git_cli.manager import GitManager
 from dev_cli.llm.client import LLMClient, LLMError
 from dev_cli.llm.streaming import StreamingRenderer
 from dev_cli.prompts.base import build_system_prompt
