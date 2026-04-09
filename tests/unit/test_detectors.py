@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from src.dev_cli.detectors import terraform
-from src.dev_cli.detectors.detector import ProjectDetector
-from src.dev_cli.detectors import nodejs, python
+from dev_cli.detectors import terraform
+from dev_cli.detectors.detector import ProjectDetector
+from dev_cli.detectors import nodejs, python
 
 
 def test_python_detector(python_project: Path) -> None:

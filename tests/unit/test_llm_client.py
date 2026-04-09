@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from src.dev_cli.llm.client import LLMClient, LLMError
+from dev_cli.llm.client import LLMClient, LLMError
 
 
 @pytest.fixture
