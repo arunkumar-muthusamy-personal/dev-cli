@@ -11,7 +11,6 @@ from pathlib import Path
 
 from dev_cli.storage.models import ProjectManifest
 
-
 # ---------------------------------------------------------------------------
 # Intent patterns → task name
 # ---------------------------------------------------------------------------
