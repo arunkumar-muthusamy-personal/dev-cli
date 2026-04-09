@@ -10,8 +10,12 @@ from rich.panel import Panel
 from rich.prompt import Prompt
 
 from dev_cli.aws_cli.manager import AWSCLIManager, detect_aws_intent, is_aws_related
+from dev_cli.git_cli.manager import GitManager
+from dev_cli.git_cli.intent_detector import is_git_related
 from dev_cli.config import get_settings
+from dev_cli.context.file_ops import FileOpsManager, detect_file_op
 from dev_cli.context.file_reader import FileContextReader
+from dev_cli.context.file_writer import FileWriter
 from dev_cli.detectors.detector import ProjectDetector
 from dev_cli.llm.client import LLMClient, LLMError
 from dev_cli.llm.streaming import StreamingRenderer
@@ -30,6 +34,7 @@ _HELP_TEXT = """
   /context        Show project manifest
   /analyze        Re-scan project
   /run <cmd>      Run a shell command and include output in context
+  /git <cmd>      Run a git command and include output in context
   /aws <cmd>      Run an AWS CLI command and include output in context
   /files <paths>  Read specific files into context (space-separated)
   /exit           Exit chat (also: /quit, Ctrl+C)
@@ -82,9 +87,12 @@ async def _chat(
     console.print(Panel(header, subtitle="dev-cli chat  •  /help for commands", expand=False))
 
     # --- Tool instances ---
-    file_reader = FileContextReader(project_path)
+    file_reader  = FileContextReader(project_path)
+    file_writer  = FileWriter(project_path, console=console)
+    file_ops     = FileOpsManager(project_path, console=console)
     shell_runner = ShellRunner(console=console)
-    aws_manager = AWSCLIManager(console=console, aws_profile=aws_profile)
+    aws_manager  = AWSCLIManager(console=console, aws_profile=aws_profile)
+    git_manager  = GitManager(project_path, console=console)
 
     # --- Conversation storage ---
     db = ConversationDB(project_path)
@@ -138,7 +146,15 @@ async def _chat(
         # --- Build enriched user message with file + AWS context ---
         extra_context_parts: list[str] = [user_input]
 
-        # 0. Dev task detection — "run tests", "build", "lint", etc.
+        # 0a. File operation detection — "delete X", "rename X to Y"
+        if not user_input.startswith("["):
+            file_op = detect_file_op(user_input)
+            if file_op:
+                op_result = file_ops.execute(file_op)
+                if op_result:
+                    extra_context_parts.append(op_result)
+
+        # 0b. Dev task detection — "run tests", "build", "lint", etc.
         if not user_input.startswith("["):
             task = detect_task(user_input)
             if task:
@@ -156,7 +172,13 @@ async def _chat(
                 console.print(f"[dim]Including files: {file_ctx.summary}[/dim]")
                 extra_context_parts.append(file_ctx.to_prompt_block())
 
-        # 2. AWS context (auto-detect if message mentions AWS resources)
+        # 2. Git context (auto-detect git intents)
+        if is_git_related(user_input) and not user_input.startswith("["):
+            git_result = await git_manager.run_from_message(user_input)
+            if git_result:
+                extra_context_parts.append(git_result.to_context_block())
+
+        # 3. AWS context (auto-detect if message mentions AWS resources)
         if is_aws_related(user_input) and not user_input.startswith("["):
             intent = detect_aws_intent(user_input)
             if intent and "{" not in intent:  # skip templates needing placeholders
@@ -180,7 +202,11 @@ async def _chat(
             token_stream = client.stream(system_prompt=system_prompt, messages=messages)
             response_text = await renderer.render(token_stream)
         except LLMError as e:
-            console.print(f"\n[red]Error: {e}[/red]")
+            console.print(f"\n[red]LLM error: {e}[/red]")
+            messages.pop()
+            continue
+        except Exception as e:
+            console.print(f"\n[red]Unexpected error: {e}[/red]")
             messages.pop()
             continue
 
@@ -190,6 +216,9 @@ async def _chat(
         estimated_tokens = len(response_text) // 4
         await db.add_message(conv.id, "assistant", response_text, tokens=estimated_tokens)
         messages.append({"role": "assistant", "content": response_text})
+
+        # Offer to write any files detected in the response
+        file_writer.prompt_and_write(response_text)
 
         # Trim in-memory history
         if len(messages) > limit * 2:
@@ -248,6 +277,14 @@ async def _handle_slash(
         result = await shell_runner.run_with_confirm(cmd_args, cwd=str(project_path))
         if result:
             return f"[Shell command output]\n{result.to_context_block()}"
+
+    elif cmd_name == "/git":
+        if not cmd_args:
+            console.print("[yellow]Usage: /git <subcommand>  e.g. /git log --oneline -10[/yellow]")
+            return None
+        result = await git_manager.run(cmd_args)
+        if result:
+            return f"[Git output]\n{result.to_context_block()}"
 
     elif cmd_name == "/aws":
         # Run AWS CLI command and inject output

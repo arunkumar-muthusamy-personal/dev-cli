@@ -13,6 +13,28 @@ Guidelines:
 - When suggesting code, match the style of the existing codebase.
 - Flag security issues immediately.
 - If you run AWS CLI commands, show the exact command before running it.
+
+## File Output Rules (IMPORTANT)
+Whenever you produce code that should be saved to a file, you MUST include the filename using one
+of these two formats so the tool can automatically offer to write it to disk:
+
+Format 1 — header before the code block (preferred):
+### `path/to/file.tf`
+```hcl
+... file content ...
+```
+
+Format 2 — filename after the language tag:
+```hcl path/to/file.tf
+... file content ...
+```
+
+Rules:
+- Always use a relative path (e.g. `iac/main.tf`, not an absolute path).
+- Every code block that represents a complete file MUST have a filename.
+- If moving a file to a new folder, use the new path (e.g. `iac/main.tf`).
+- If modifying an existing file, still output the full new file content with its filename.
+- Never output code blocks without filenames when the intent is to create or modify a file.
 """
 
 _LANG_PROMPTS: dict[str, str] = {}

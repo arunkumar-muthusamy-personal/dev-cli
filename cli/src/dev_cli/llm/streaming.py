@@ -7,11 +7,7 @@ from rich.markdown import Markdown
 
 
 class StreamingRenderer:
-    """Render streaming LLM tokens to the terminal.
-
-    Tokens are printed directly as they arrive (no re-rendering).
-    The full response is rendered as Markdown once the stream ends.
-    """
+    """Stream LLM tokens to terminal, render as Markdown once complete."""
 
     def __init__(self, console: Console | None = None) -> None:
         self._console = console or Console()
@@ -21,23 +17,19 @@ class StreamingRenderer:
         token_stream: AsyncGenerator[str, None],
         render_markdown: bool = True,
     ) -> str:
-        """Stream tokens to terminal, return full accumulated text."""
+        """Consume token stream, return full accumulated text."""
         buffer = ""
 
-        # Print tokens as they arrive — no re-rendering
-        async for token in token_stream:
-            buffer += token
-            self._console.print(token, end="", markup=False, highlight=False)
-
-        # Move to new line after stream ends
-        self._console.print()
-
-        # Re-render the full response as Markdown (replaces the raw token output)
-        if render_markdown and buffer.strip():
-            # Clear the raw streamed output and reprint as formatted markdown
-            self._console.print()
-            self._console.rule(style="dim")
+        if render_markdown:
+            # Accumulate silently, render once as formatted Markdown
+            async for token in token_stream:
+                buffer += token
             self._console.print(Markdown(buffer))
-            self._console.rule(style="dim")
+        else:
+            # Plain text: print tokens as they arrive
+            async for token in token_stream:
+                buffer += token
+                self._console.print(token, end="", markup=False, highlight=False)
+            self._console.print()
 
         return buffer
